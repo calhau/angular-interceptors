@@ -1,27 +1,85 @@
-# ProjetoInterceptor
+Config projeto
 
-This project was generated with [Angular CLI](https://github.com/angular/angular-cli) version 11.2.1.
+Projeto configurado com docker-compose porem ainda não está funcionando,
+Rodar somente com ng serve 
 
-## Development server
+===============================================================================================================
+Resumo
 
-Run `ng serve` for a dev server. Navigate to `http://localhost:4200/`. The app will automatically reload if you change any of the source files.
+Esse projeto resolvi estudar um pouco sobre Interceptors no Angular...
 
-## Code scaffolding
+Praticamente criei uma classe 'custom-http-interceptors', que extende da interface HttpInterceptors,
+sendo assim necessita implementar o metodo intercept()
 
-Run `ng generate component component-name` to generate a new component. You can also use `ng generate directive|pipe|service|class|guard|interface|enum|module`.
 
-## Build
+===============================================================================================================
+import { HttpErrorResponse, HttpEvent, HttpHandler, HttpInterceptor, HttpRequest } from "@angular/common/http";
+import { Injectable } from "@angular/core";
+import { Observable, throwError } from "rxjs";
+import { catchError, retry } from "rxjs/operators";
 
-Run `ng build` to build the project. The build artifacts will be stored in the `dist/` directory. Use the `--prod` flag for a production build.
 
-## Running unit tests
+@Injectable()
+export class CustomHttpInterceptor implements HttpInterceptor{
 
-Run `ng test` to execute the unit tests via [Karma](https://karma-runner.github.io).
+    intercept(req: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>>{
 
-## Running end-to-end tests
+        //Add AuthToken
+        //In production you would get the token value from an auth service
 
-Run `ng e2e` to execute the end-to-end tests via [Protractor](http://www.protractortest.org/).
+        const hardcodedToken = '1234-1234-1234-1234';
+        const reqWithAuth = req.clone({
+            setHeaders: {
+                Authorization: `Bearer ${hardcodedToken}`
+            }
+        });
 
-## Further help
+        // Nesse return demonstra o token de autorizacao
+        // return next.handle(reqWithAuth);
 
-To get more help on the Angular CLI use `ng help` or go check out the [Angular CLI Overview and Command Reference](https://angular.io/cli) page.
+        return next.handle(req)
+            .pipe(
+                retry(2),
+                catchError((error: HttpErrorResponse) => {
+                    alert(`HTTP Error: ${req.url}`);
+                    return throwError(error)
+                })
+            )
+
+    }
+}
+===============================================================================================================
+
+Depois precisamos adicionar o importe no app.module em providers
+
+  providers: [
+    {
+      provide: HTTP_INTERCEPTORS,
+      useClass: CustomHttpInterceptor,
+      multi: true
+    }
+  ],
+
+===============================================================================================================
+  
+Feito isso realizei o import do HttpClientModule no appmodule
+
+e depois fui direto no app.component.ts, fiz inject do httpClient e adicionei a interface OnInit...
+
+dentro do metodo ngOnInit() fiz a chamada para o serviço do **https://jsonplaceholder.typicode.com/**
+
+  ngOnInit(){
+    this.http.get('http://jsonplaceholder.typicode.com/users')
+      .subscribe( data => 
+        console.log('Aqui Bruno: ', data))
+  }
+
+
+===============================================================================
+COmando node não funcionando no terminal
+
+Rodar comandos abaixo no terminal:
+
+echo 'eval $(/home/linuxbrew/.linuxbrew/bin/brew shellenv)' >> /home/calhau/.zprofile
+
+eval $(/home/linuxbrew/.linuxbrew/bin/brew shellenv)
